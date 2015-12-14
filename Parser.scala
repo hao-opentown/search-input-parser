@@ -17,7 +17,8 @@ object SearchOperatorsParser extends JavaTokenParsers {
 
 	def values: Parser[Set[String]] = ident ~ rep("," ~ ident) ^^ {
 		//Question: why `Set(value) /: list` would fail?
-		case value ~ list => list.foldLeft(Set(value)) {
+		//Answer: The parenthethis are needed due to rules of precedence.
+		case value ~ list => (Set(value) /: list) {
 			case (values, "," ~ value) => values + value
 		}
 	}
@@ -30,7 +31,7 @@ object SearchOperatorsParser extends JavaTokenParsers {
 
 	//Question: why `ident | kvPair` would fail ?
 	def operators: Parser[Operators] = rep(kvPair | ident) ^^ {
-		case list => list.foldLeft(Operators()) {
+		case list => (Operators() /: list) {
 			case (operators, plaintext: String) => merge(operators, Operators("plaintext", Set(plaintext)))
 			case (operators, kvPair: Operators) => merge(operators, kvPair)
 		}
