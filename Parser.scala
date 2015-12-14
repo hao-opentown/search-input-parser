@@ -12,24 +12,25 @@ object SearchOperatorsParser extends JavaTokenParsers {
 		Map[String, Set[String]](a -> b)
 	}	
 	def merge(a : Operators, b : Operators) : Operators = {
-		a ++ b.map{case (k, v) => k -> (v ++ a.getOrElse(k, Set()))}	
+		a ++ b.map{case (k, v) => k -> (a.getOrElse(k, Set()) ++ v)}	
 	}
 
-	def values : Parser[Set[String]] = stringLiteral ~ rep( "," ~ stringLiteral ) ^^ {
-		case value ~ list => Set(value) /: list {
+	def values : Parser[Set[String]] = ident ~ rep( "," ~ ident ) ^^ {
+		//Question: why `Set(value) /: list` would fail?
+		case value ~ list => list.foldLeft(Set(value)) {
 			case (values, "," ~ value) => values + value
 		} 		
 	}
 	
-	def kvPair : Parser[Operators] = stringLiteral ~ ":" ~ values ^^ {
+	def kvPair : Parser[Operators] = ident ~ ":" ~ values ^^ {
 		case key ~ ":" ~ values => 
 			Operators(key, values)
 		
 	}
 
-
-	def operators : Parser[Operators] = rep( stringLiteral | kvPair ) ^^ {
-		case list => Operators() /: list {
+	//Question: why `ident | kvPair` would fail ?
+	def operators : Parser[Operators] = rep(  kvPair | ident ) ^^ {
+		case list => list.foldLeft(Operators()) {
 			case (operators, plaintext: String) => merge(operators, Operators("plaintext", Set(plaintext)))
 			case (operators, kvPair: Operators) => merge(operators, kvPair)
 		} 
