@@ -1,9 +1,9 @@
 import scala.collection.immutable.{ Map, Set }
-import scala.util.parsing.combinator.{ JavaTokenParsers, Parsers }
+import scala.util.parsing.combinator.{ RegexParsers, Parsers }
 import scala.util.parsing.input._
 import scala.language.implicitConversions
 
-object SearchOperatorsParser extends JavaTokenParsers {
+object SearchOperatorsParser extends RegexParsers {
 	type Operators = Map[String, Set[String]]
 
 	def Operators() = Map[String, Set[String]]()
@@ -15,16 +15,18 @@ object SearchOperatorsParser extends JavaTokenParsers {
 		a ++ b.map { case (k, v) => k -> (a.getOrElse(k, Set()) ++ v) }
 	}
 
-	def values: Parser[Set[String]] = ident ~ rep("," ~ ident) ^^ {
+	def ident = """[^\s,:，：]+""".r
+
+	def values: Parser[Set[String]] = ident ~ rep(",|，".r ~> ident) ^^ {
 		//Question: why `Set(value) /: list` would fail?
 		//Answer: The parenthethis are needed due to rules of precedence.
 		case value ~ list => (Set(value) /: list) {
-			case (values, "," ~ value) => values + value
+			case (values, value) => values + value
 		}
 	}
 
-	def kvPair: Parser[Operators] = ident ~ ":" ~ values ^^ {
-		case key ~ ":" ~ values =>
+	def kvPair: Parser[Operators] = (ident <~ ":|：".r) ~ values ^^ {
+		case key ~ values =>
 			Operators(key, values)
 
 	}
